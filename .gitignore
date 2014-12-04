@@ -1,3 +1,6 @@
+# Ignore credentials file for security
+credentials.yaml
+
 *.gem
 *.rbc
 /.config
