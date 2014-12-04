@@ -94,7 +94,14 @@ end
 # Get credentials from file. Returns hash of
 # {testrail_username: "", testrail_password: ""}
 def load_credentials()
-  YAML.load_file(CREDENTIALS_FILE)
+  begin
+    YAML.load_file(CREDENTIALS_FILE)  
+  rescue
+    puts "Error: Could not find credentials.yaml\nHave you copied credentials_template.yaml and filled in your info?"
+
+    exit
+    
+  end
 end
 
 
