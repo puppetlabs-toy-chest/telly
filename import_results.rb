@@ -91,8 +91,15 @@ end
 # TestRail API
 ##################################
 
-# Get credentials from file. Returns hash of
-# {testrail_username: "", testrail_password: ""}
+# Load testrail credentials from file
+#
+# ==== Returns
+#
+# +hash+ - Contains testrail_username and testrail_password
+#
+# ==== Examples
+#
+# password = load_credentials()["testrail_password"]
 def load_credentials()
   begin
     YAML.load_file(CREDENTIALS_FILE)  
@@ -106,6 +113,18 @@ end
 
 
 # Returns a testrail API object that talks to testrail
+#
+# ==== Attributes
+#
+# * +credentials+ - A hash containing at least two keys, testrail_username and testrail_password
+# 
+# ==== Returns
+#
+# +TestRail::APIClient+ - The API object for talking to TestRail
+#
+# ==== Examples
+#
+# api = get_testrail_api(load_credentials)
 def get_testrail_api(credentials)
   client = TestRail::APIClient.new(TESTRAIL_URL)
   client.user = credentials["testrail_username"]
@@ -116,6 +135,18 @@ end
 
 # Sets the results in testrail. 
 # Tests that have testrail API exceptions are kept track of in bad_results
+#
+# ==== Attributes
+#
+# * +results+ - A hash of lists of xml objects from the junit output file.
+# * +junit_file+ - The path to the junit xml file
+#   Needed for determining the path of the test file in add_failure, etc
+# * +testrun_id+ - The TestRail test run ID
+# 
+# ==== Returns
+#
+# nil
+#
 def set_testrail_results(results, junit_file, testrun_id)
   testrail_api = get_testrail_api(load_credentials)
 
@@ -237,6 +268,18 @@ end
 # 
 # Testrail throws an exception if it gets "0s", so it returns a 
 # minimum of "1s"
+#
+# ==== Attributes
+#
+# * +seconds_string+ - A string that contains only a number, the elapsed time of a test
+# 
+# ==== Returns
+#
+# +string+ - The elapsed time of the test run, rounded and with an 's' appended
+#
+# ==== Examples
+#
+# puts make_testrail_time("2.34") # "2s"
 def make_testrail_time(seconds_string)
   # If time is 0, make it 1
   rounded_time = [seconds_string.to_f.round, 1].max
@@ -254,6 +297,18 @@ end
 # Loads the results of a beaker run.
 # Returns hash of failures, passes, and skips that each hold a list of 
 # junit xml objects
+#
+# ==== Attributes
+#
+# * +junit_file+ - Path to a junit xml file
+# 
+# ==== Returns
+#
+# +hash+ - A hash containing xml objects for the failures, skips, and passes
+#
+# ==== Examples
+#
+# load_junit_results("~/junit/latest/beaker_junit.xml")
 def load_junit_results(junit_file)
   junit_doc = Nokogiri::XML(File.read(junit_file))
 
@@ -266,6 +321,18 @@ end
 
 
 # Extracts the test case id from the test script
+#
+# ==== Attributes
+#
+# * +beaker_file+ - Path to a beaker test script
+# 
+# ==== Returns
+#
+# +string+ - The test case ID
+#
+# ==== Examples
+#
+# testcase_id_from_beaker_script("~/tests/test_the_things.rb") # 1234
 def testcase_id_from_beaker_script(beaker_file)
   # Find first matching line
   match = File.readlines(beaker_file).map { |line| line.match(TESTCASE_ID_REGEX) }.compact.first
@@ -274,8 +341,24 @@ def testcase_id_from_beaker_script(beaker_file)
 end
 
 
-# Calculates the path to a beaker test file
-# TODO somewhat hacky, maybe use Pathname module?
+# Calculates the path to a beaker test file by combining the junit file path
+# with the test name from the junit results.
+# Makes the assumption that junit folder that beaker creates will always be 
+# 2 directories up from the beaker script base directory.
+# TODO somewhat hacky, maybe a config/command line option
+#
+# ==== Attributes
+#
+# * +junit_file_path+ - Path to a junit xml file
+# * +junit_result+ - Path to a junit xml file
+# 
+# ==== Returns
+#
+# +string+ - The path to the beaker script from the junit test result
+#
+# ==== Examples
+#
+# load_junit_results("~/junit/latest/beaker_junit.xml")
 def beaker_test_path(junit_file_path, junit_result)
   beaker_folder_path = junit_result[:classname]
   test_filename = junit_result[:name]
