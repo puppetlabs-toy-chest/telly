@@ -19,7 +19,7 @@ require 'optparse'
 require 'nokogiri'
 require 'yaml'
 require 'pp'
-require_relative 'testrail'
+require 'testrail'
 
 
 TESTRAIL_URL = 'https://testrail.ops.puppetlabs.net/index.php'
