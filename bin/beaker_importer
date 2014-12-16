@@ -23,7 +23,7 @@ require 'testrail'
 
 
 TESTRAIL_URL = 'https://testrail.ops.puppetlabs.net/index.php'
-CREDENTIALS_FILE = 'credentials.yaml'
+CREDENTIALS_FILE = '~/.testrail_credentials.yaml'
 
 # Used for extracted the test case ID from beaker scripts
 TESTCASE_ID_REGEX = /.*(?<jira_ticket>\w+-\d+).*[cC](?<testrun_id>\d+)/
@@ -99,9 +99,11 @@ end
 # @example password = load_credentials()["testrail_password"]
 def load_credentials()
   begin
-    YAML.load_file(CREDENTIALS_FILE)  
+    YAML.load_file(File.expand_path(CREDENTIALS_FILE))  
   rescue
-    puts "Error: Could not find credentials.yaml\nHave you copied credentials_template.yaml and filled in your info?"
+    puts "Error: Could not find #{CREDENTIALS_FILE}"
+    puts "Create #{CREDENTIALS_FILE} with the following:"
+    puts "testrail_username: your.username\ntestrail_password: yourpassword"
 
     exit
     
@@ -330,6 +332,5 @@ def beaker_test_path(junit_file_path, junit_result)
 end
 
 
-if __FILE__ == $PROGRAM_NAME
-  main parse_opts
-end
+# Run main function
+main parse_opts
