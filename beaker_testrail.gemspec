@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.description = "Imports beaker results into TestRail test run results"
   s.authors     = ["Joe Pinsonault"]
   s.email       = 'joe.pinsonault@gmail.com'
-  s.files       = "lib/testrail.rb"
+  s.files       = Dir["lib/**/*"]
   s.executables = ['beaker_importer']
   s.homepage    = 'http://rubygems.org/gems/beaker_testrail'
   s.license     = 'Apache'
