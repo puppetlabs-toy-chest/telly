@@ -12,10 +12,6 @@ describe BeakerTestrail do
       "testrail_username" => "test",
       "testrail_password" => "testpass"
     }
-
-    stub_request(:post, "http://www.example.com/").
-      with(:headers => {'Accept'=>'*/*', 'User-Agent'=>'Ruby'}).
-      to_return(:status => 200, :body => "", :headers => {})
   end
 
   describe "#get_testrail_api" do
