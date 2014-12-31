@@ -34,6 +34,12 @@ module BeakerTestrail
   BLOCKED = 2
   FAILED = 5
 
+  def do_stub_test(credentials)
+    api = get_testrail_api(credentials)
+
+    api.send_post
+  end
+
 
   ##################################
   # Main
@@ -56,7 +62,15 @@ module BeakerTestrail
     puts "#{results[:skips].length} Skipped"
 
     # Set results in testrail
-    set_testrail_results(results, options[:junit_file], options[:testrun_id])
+    bad_results = set_testrail_results(results, options[:junit_file], options[:testrun_id])
+
+    # Print error messages
+    if not bad_results.empty?
+      puts "Error: There were problems processing these test scripts:"
+      bad_results.each do |test_script, error|
+        puts "#{test_script}:\n\t#{error}"
+      end
+    end
   end
 
 
@@ -69,12 +83,12 @@ module BeakerTestrail
   # @return [Hash] Contains testrail_username and testrail_password
   #
   # @example password = load_credentials()["testrail_password"]
-  def BeakerTestrail.load_credentials()
+  def BeakerTestrail.load_credentials(credentials_file)
     begin
-      YAML.load_file(File.expand_path(CREDENTIALS_FILE))  
+      YAML.load_file(File.expand_path(credentials_file))  
     rescue
-      puts "Error: Could not find #{CREDENTIALS_FILE}"
-      puts "Create #{CREDENTIALS_FILE} with the following:"
+      puts "Error: Could not find #{credentials_file}"
+      puts "Create #{credentials_file} with the following:"
       puts "testrail_username: your.username\ntestrail_password: yourpassword"
 
       exit
@@ -106,10 +120,11 @@ module BeakerTestrail
   #                 Needed for determining the path of the test file in add_failure, etc
   # @param [String] testrun_id The TestRail test run ID
   # 
-  # @return [void] 
+  # @return [Void] 
   #
   def BeakerTestrail.set_testrail_results(results, junit_file, testrun_id)
-    testrail_api = get_testrail_api(load_credentials)
+    credentials = load_credentials(CREDENTIALS_FILE)
+    api = get_testrail_api(credentials)
 
     # Results that couldn't be set in testrail for some reason
     bad_results = {}
@@ -117,7 +132,7 @@ module BeakerTestrail
     # passes
     results[:passes].each do |junit_result|
       begin
-        add_pass(testrail_api, junit_result, junit_file, testrun_id)    
+        submit_result(api, PASSED, junit_result, junit_file, testrun_id)    
       rescue TestRail::APIError => e
         bad_results[junit_result[:name]] = e.message
       end
@@ -126,7 +141,7 @@ module BeakerTestrail
     # Failures
     results[:failures].each do |junit_result|
       begin
-        add_failure(testrail_api, junit_result, junit_file, testrun_id)    
+        submit_result(api, FAILED, junit_result, junit_file, testrun_id)    
       rescue TestRail::APIError => e
         bad_results[junit_result[:name]] = e.message
       end
@@ -135,89 +150,57 @@ module BeakerTestrail
     # Skips
     results[:skips].each do |junit_result|
       begin
-        add_skip(testrail_api, junit_result, junit_file, testrun_id)    
+        submit_result(api, BLOCKED, junit_result, junit_file, testrun_id)    
       rescue TestRail::APIError => e
         bad_results[junit_result[:name]] = e.message
       end
     end
 
-    # Print error messages
-    if not bad_results.empty?
-      puts "Error: There were problems processing these test scripts:"
-      bad_results.each do |test_script, error|
-        puts "#{test_script}:\n\t#{error}"
-      end
-    end
+    return bad_results
   end
 
-
-  # Adds a fail result to a testcase
-  # Adds a comment to the result with the error message from the test run
-  def BeakerTestrail.add_failure(testrail_api, junit_result, junit_file, testrun_id)
+  # Submits a test result to TestRail
+  #
+  # @param [TestRail::APIClient] api TestRail API object
+  # @param [int] status The testrail status to set
+  # @param [Nokogiri::XML::Element] junit_result The nokogiri node that holds the junit result
+  # @param [String] junit_file Path to the junit file the test result originated from
+  # @param [String] testrun_id The testrun ID
+  #
+  # @return [Void]
+  # 
+  # @raise [TestRail::APIError] When there is a problem with the API request, testrail raises
+  #                             this exception. Should be caught for error reporting
+  #
+  # @example submit_result(api, BLOCKED, junit_result, junit_file, testrun_id)
+  def BeakerTestrail.submit_result(api, status, junit_result, junit_file, testrun_id)
     test_file_path = beaker_test_path(junit_file, junit_result)
 
+    puts junit_result.class
     testcase_id = testcase_id_from_beaker_script(test_file_path)
 
     time_elapsed = make_testrail_time(junit_result[:time])
 
-    # Make an appropriate comment for the test's error message
-    error_message = junit_result.xpath('./failure').first[:message]
-    testrail_comment = "Failed with message:\n#{error_message}"
+    # Make appropriate comment for testrail
+    case status
+    when FAILED
+      error_message = junit_result.xpath('./failure').first[:message]
+      testrail_comment = "Failed with message:\n#{error_message}"
+    when BLOCKED
+      skip_message = junit_result.xpath('system-out').first.text
+      testrail_comment = "Skipped with message:\n#{skip_message}"
+    else
+      testrail_comment = "Passed"
+    end
 
-    puts "\nSetting result for failed test case: #{testcase_id}"
+    puts "\nSetting result for test case: #{testcase_id}"
     puts "Adding comment:\n#{testrail_comment}"
 
-    # TODO add user ID to result
-    testrail_api.send_post("add_result_for_case/#{testrun_id}/#{testcase_id}", 
+    api.send_post("add_result_for_case/#{testrun_id}/#{testcase_id}", 
       {
-        status_id: FAILED,
+        status_id: status,
         comment: testrail_comment,
         elapsed: time_elapsed,
-      }
-    )
-  end
-
-
-  # Adds a pass result to a testcase
-  def BeakerTestrail.add_pass(testrail_api, junit_result, junit_file, testrun_id)
-    test_file_path = beaker_test_path(junit_file, junit_result)
-
-    testcase_id = testcase_id_from_beaker_script(test_file_path)
-
-    time_elapsed = make_testrail_time(junit_result[:time])
-
-    puts "\nSetting result for passing test case: #{testcase_id}"
-
-    testrail_api.send_post("add_result_for_case/#{testrun_id}/#{testcase_id}", 
-      {
-        status_id: PASSED,
-        elapsed: time_elapsed
-      }
-    )
-  end
-
-
-  # Adds a pass result to a testcase
-  # Adds a comment with the skip message
-  def BeakerTestrail.add_skip(testrail_api, junit_result, junit_file, testrun_id)
-    test_file_path = beaker_test_path(junit_file, junit_result)
-
-    testcase_id = testcase_id_from_beaker_script(test_file_path)
-
-    time_elapsed = make_testrail_time(junit_result[:time])
-
-    # Make an appropriate comment for the test's skip message
-    skip_message = junit_result.xpath('system-out').first.text
-    testrail_comment = "Skipped with message:\n#{skip_message}"
-
-    puts "\nSetting result for skipped test case: #{testcase_id}"
-    puts "Adding comment:\n#{testrail_comment}"
-
-    testrail_api.send_post("add_result_for_case/#{testrun_id}/#{testcase_id}", 
-      {
-        status_id: BLOCKED,
-        comment: testrail_comment,
-        elapsed: time_elapsed
       }
     )
   end

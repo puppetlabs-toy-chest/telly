@@ -10,4 +10,6 @@ Gem::Specification.new do |s|
   s.executables = ['beaker_importer']
   s.homepage    = 'http://rubygems.org/gems/beaker_testrail'
   s.license     = 'Apache'
+  s.add_runtime_dependency 'webmock'
+  s.add_development_dependency 'rspec'
 end
