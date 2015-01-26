@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'telly'
-  s.version     = '0.1.0'
+  s.version     = '0.1.1'
   s.date        = '2014-12-15'
   s.summary     = "Imports beaker results into TestRail test run results"
   s.description = "Imports beaker results into TestRail test run results"
