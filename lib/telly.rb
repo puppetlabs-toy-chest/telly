@@ -5,7 +5,7 @@ require 'yaml'
 require 'pp'
 require 'testrail'
 
-# == beaker_testrail.rb
+# == telly.rb
 # This module provides functions to add test results in testrail from a 
 # finished beaker run. 
 # 
@@ -21,7 +21,7 @@ require 'testrail'
 #   for each test case found in the test suite of the run. You can therefore think
 #   of a test as an “instance” of a test case which can have test results, comments 
 #   and a test status.""
-module BeakerTestrail
+module Telly
 
   TESTRAIL_URL = 'https://testrail.ops.puppetlabs.net/'
   CREDENTIALS_FILE = '~/.testrail_credentials.yaml'
@@ -51,8 +51,8 @@ module BeakerTestrail
   #
   # @return [Void]
   #
-  # @example password = BeakerTestrail::main(parse_opts)
-  def BeakerTestrail.main(options)
+  # @example password = Telly::main(parse_opts)
+  def Telly.main(options)
     # Get pass/fail/skips from junit file
     results = load_junit_results(options[:junit_file])
 
@@ -83,7 +83,7 @@ module BeakerTestrail
   # @return [Hash] Contains testrail_username and testrail_password
   #
   # @example password = load_credentials()["testrail_password"]
-  def BeakerTestrail.load_credentials(credentials_file)
+  def Telly.load_credentials(credentials_file)
     begin
       YAML.load_file(File.expand_path(credentials_file))  
     rescue
@@ -104,7 +104,7 @@ module BeakerTestrail
   # @return [TestRail::APIClient] The API object for talking to TestRail
   #
   # @example api = get_testrail_api(load_credentials)
-  def BeakerTestrail.get_testrail_api(credentials)
+  def Telly.get_testrail_api(credentials)
     client = TestRail::APIClient.new(TESTRAIL_URL)
     client.user = credentials["testrail_username"]
     client.password = credentials["testrail_password"]
@@ -122,7 +122,7 @@ module BeakerTestrail
   # 
   # @return [Void] 
   #
-  def BeakerTestrail.set_testrail_results(results, junit_file, testrun_id)
+  def Telly.set_testrail_results(results, junit_file, testrun_id)
     credentials = load_credentials(CREDENTIALS_FILE)
     api = get_testrail_api(credentials)
 
@@ -173,7 +173,7 @@ module BeakerTestrail
   #                             this exception. Should be caught for error reporting
   #
   # @example submit_result(api, BLOCKED, junit_result, junit_file, testrun_id)
-  def BeakerTestrail.submit_result(api, status, junit_result, junit_file, testrun_id)
+  def Telly.submit_result(api, status, junit_result, junit_file, testrun_id)
     test_file_path = beaker_test_path(junit_file, junit_result)
 
     puts junit_result.class
@@ -218,7 +218,7 @@ module BeakerTestrail
   # @return [String] The elapsed time of the test run, rounded and with an 's' appended
   #
   # @example puts make_testrail_time("2.34") # "2s"
-  def BeakerTestrail.make_testrail_time(seconds_string)
+  def Telly.make_testrail_time(seconds_string)
     # If time is 0, make it 1
     rounded_time = [seconds_string.to_f.round, 1].max
     # Test duration
@@ -241,7 +241,7 @@ module BeakerTestrail
   # @return [Hash] A hash containing xml objects for the failures, skips, and passes
   #
   # @example load_junit_results("~/junit/latest/beaker_junit.xml")
-  def BeakerTestrail.load_junit_results(junit_file)
+  def Telly.load_junit_results(junit_file)
     junit_doc = Nokogiri::XML(File.read(junit_file))
 
     failures = junit_doc.xpath('//testcase[failure]')
@@ -259,7 +259,7 @@ module BeakerTestrail
   # @return [String] The test case ID
   #
   # @example testcase_id_from_beaker_script("~/tests/test_the_things.rb") # 1234
-  def BeakerTestrail.testcase_id_from_beaker_script(beaker_file)
+  def Telly.testcase_id_from_beaker_script(beaker_file)
     # Find first matching line
     match = File.readlines(beaker_file).map { |line| line.match(TESTCASE_ID_REGEX) }.compact.first
 
@@ -279,7 +279,7 @@ module BeakerTestrail
   # @return [String] The path to the beaker script from the junit test result
   #
   # @example load_junit_results("~/junit/latest/beaker_junit.xml")
-  def BeakerTestrail.beaker_test_path(junit_file_path, junit_result)
+  def Telly.beaker_test_path(junit_file_path, junit_result)
     beaker_folder_path = junit_result[:classname]
     test_filename = junit_result[:name]
 

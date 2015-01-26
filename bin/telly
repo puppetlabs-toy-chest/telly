@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-# == beaker_importer.rb
+# == telly.rb
 # This script adds test results in testrail from a finished beaker run
 # It takes in a beaker junit file and a TestRail Testrun ID
 # 
@@ -15,7 +15,7 @@
 #   of a test as an “instance” of a test case which can have test results, comments 
 #   and a test status.""
 
-require 'beaker_testrail'
+require 'telly'
 require 'optparse'
 
 # Parses the command line options
@@ -54,4 +54,4 @@ def parse_opts
   options_hash
 end
 
-BeakerTestrail::main(parse_opts)
+Telly::main(parse_opts)

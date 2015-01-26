@@ -1,9 +1,9 @@
-beaker-testrail
+telly
 ===============
 
-The beaker_testrail project is a script designed to relieve the manual effort required when setting TestRail results for automated Beaker tests
+The telly project is a script designed to relieve the manual effort required when setting TestRail results for automated Beaker tests
 
-**The beaker_testrail project is very much in Alpha right now, and not recommended for use**
+**The telly project is very much in Alpha right now, and not recommended for use**
 
 Download
 --
@@ -12,14 +12,14 @@ Soon a gem will be put on rubygems.org
 
 For now you can package and install the gem manually with 
 
-`gem build beaker_testrail.gemspec`
+`gem build telly.gemspec`
 
-`gem install beaker_testrail-0.1.0.gem`
+`gem install telly-0.1.0.gem`
 
 
 Usage
 --
-`beaker_importer -t 1234123121 -j beaker_tests/junit/latest/beaker_junit.xml`
+`telly -t 1234123121 -j beaker_tests/junit/latest/beaker_junit.xml`
 
 Currently using the script requires a few things.
 
