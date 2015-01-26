@@ -4,7 +4,7 @@ Gem::Specification.new do |s|
   s.date        = '2014-12-15'
   s.summary     = "Imports beaker results into TestRail test run results"
   s.description = "Imports beaker results into TestRail test run results"
-  s.authors     = ["Joe Pinsonault"]
+  s.authors     = ["Joe Pinsonault", "Puppetlabs"]
   s.email       = 'joe.pinsonault@gmail.com'
 
   s.files       = Dir["lib/**/*"]
