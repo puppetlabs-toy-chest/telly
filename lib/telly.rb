@@ -5,6 +5,7 @@ require 'yaml'
 require 'pp'
 require 'testrail'
 
+
 # == telly.rb
 # This module provides functions to add test results in testrail from a 
 # finished beaker run. 
@@ -22,6 +23,11 @@ require 'testrail'
 #   of a test as an “instance” of a test case which can have test results, comments 
 #   and a test status.""
 module Telly
+
+  # This exception is thrown when a testcase ID can't be found in a beaker
+  # script. It's meant to be caught and shown to the user as a warning
+  class MissingTestRailId < StandardError
+  end
 
   TESTRAIL_URL = 'https://testrail.ops.puppetlabs.net/'
   CREDENTIALS_FILE = '~/.testrail_credentials.yaml'
@@ -132,8 +138,8 @@ module Telly
     # passes
     results[:passes].each do |junit_result|
       begin
-        submit_result(api, PASSED, junit_result, junit_file, testrun_id)    
-      rescue Exception => e
+        submit_result(api, PASSED, junit_result, junit_file, testrun_id)
+      rescue MissingTestRailId, TestRail::APIError => e
         bad_results[junit_result[:name]] = e.message
       end
     end
@@ -142,7 +148,7 @@ module Telly
     results[:failures].each do |junit_result|
       begin
         submit_result(api, FAILED, junit_result, junit_file, testrun_id)
-      rescue Exception => e
+      rescue MissingTestRailId, TestRail::APIError => e
         bad_results[junit_result[:name]] = e.message
       end
     end
@@ -151,7 +157,7 @@ module Telly
     results[:skips].each do |junit_result|
       begin
         submit_result(api, BLOCKED, junit_result, junit_file, testrun_id)
-      rescue Exception => e
+      rescue MissingTestRailId, TestRail::APIError => e
         bad_results[junit_result[:name]] = e.message
       end
     end
@@ -263,7 +269,7 @@ module Telly
     # Find first matching line
     match = File.readlines(beaker_file).map { |line| line.match(TESTCASE_ID_REGEX) }.compact.first
 
-    raise Exception, 'Testcase ID could not be found in file' if match.nil?
+    raise MissingTestRailId, 'Testcase ID could not be found in file' if match.nil?
 
     match[:testrun_id]
   end
