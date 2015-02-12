@@ -5,6 +5,7 @@ require 'yaml'
 require 'pp'
 require 'testrail'
 
+
 # == telly.rb
 # This module provides functions to add test results in testrail from a 
 # finished beaker run. 
@@ -22,6 +23,11 @@ require 'testrail'
 #   of a test as an “instance” of a test case which can have test results, comments 
 #   and a test status.""
 module Telly
+
+  # This exception is thrown when a testcase ID can't be found in a beaker
+  # script. It's meant to be caught and shown to the user as a warning
+  class MissingTestRailId < StandardError
+  end
 
   TESTRAIL_URL = 'https://testrail.ops.puppetlabs.net/'
   CREDENTIALS_FILE = '~/.testrail_credentials.yaml'
@@ -132,8 +138,8 @@ module Telly
     # passes
     results[:passes].each do |junit_result|
       begin
-        submit_result(api, PASSED, junit_result, junit_file, testrun_id)    
-      rescue TestRail::APIError => e
+        submit_result(api, PASSED, junit_result, junit_file, testrun_id)
+      rescue MissingTestRailId, TestRail::APIError => e
         bad_results[junit_result[:name]] = e.message
       end
     end
@@ -141,8 +147,8 @@ module Telly
     # Failures
     results[:failures].each do |junit_result|
       begin
-        submit_result(api, FAILED, junit_result, junit_file, testrun_id)    
-      rescue TestRail::APIError => e
+        submit_result(api, FAILED, junit_result, junit_file, testrun_id)
+      rescue MissingTestRailId, TestRail::APIError => e
         bad_results[junit_result[:name]] = e.message
       end
     end
@@ -150,8 +156,8 @@ module Telly
     # Skips
     results[:skips].each do |junit_result|
       begin
-        submit_result(api, BLOCKED, junit_result, junit_file, testrun_id)    
-      rescue TestRail::APIError => e
+        submit_result(api, BLOCKED, junit_result, junit_file, testrun_id)
+      rescue MissingTestRailId, TestRail::APIError => e
         bad_results[junit_result[:name]] = e.message
       end
     end
@@ -168,7 +174,7 @@ module Telly
   # @param [String] testrun_id The testrun ID
   #
   # @return [Void]
-  # 
+  #
   # @raise [TestRail::APIError] When there is a problem with the API request, testrail raises
   #                             this exception. Should be caught for error reporting
   #
@@ -196,7 +202,7 @@ module Telly
     puts "\nSetting result for test case: #{testcase_id}"
     puts "Adding comment:\n#{testrail_comment}"
 
-    api.send_post("add_result_for_case/#{testrun_id}/#{testcase_id}", 
+    api.send_post("add_result_for_case/#{testrun_id}/#{testcase_id}",
       {
         status_id: status,
         comment: testrail_comment,
@@ -207,10 +213,10 @@ module Telly
 
 
   # Returns a string that testrail accepts as an elapsed time
-  # Input from beaker is a float in seconds, so it rounds it to the 
+  # Input from beaker is a float in seconds, so it rounds it to the
   # nearest second, and adds an 's' at the end
-  # 
-  # Testrail throws an exception if it gets "0s", so it returns a 
+  #
+  # Testrail throws an exception if it gets "0s", so it returns a
   # minimum of "1s"
   #
   # @param [String] seconds_string A string that contains only a number, the elapsed time of a test
@@ -233,11 +239,11 @@ module Telly
   ##################################
 
   # Loads the results of a beaker run.
-  # Returns hash of failures, passes, and skips that each hold a list of 
+  # Returns hash of failures, passes, and skips that each hold a list of
   # junit xml objects
   #
   # @param [String] junit_file Path to a junit xml file
-  # 
+  #
   # @return [Hash] A hash containing xml objects for the failures, skips, and passes
   #
   # @example load_junit_results("~/junit/latest/beaker_junit.xml")
@@ -255,13 +261,15 @@ module Telly
   # Extracts the test case id from the test script
   #
   # @param [String] beaker_file Path to a beaker test script
-  # 
+  #
   # @return [String] The test case ID
   #
   # @example testcase_id_from_beaker_script("~/tests/test_the_things.rb") # 1234
   def Telly.testcase_id_from_beaker_script(beaker_file)
     # Find first matching line
     match = File.readlines(beaker_file).map { |line| line.match(TESTCASE_ID_REGEX) }.compact.first
+
+    raise MissingTestRailId, 'Testcase ID could not be found in file' if match.nil?
 
     match[:testrun_id]
   end
