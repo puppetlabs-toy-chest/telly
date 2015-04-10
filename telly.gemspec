@@ -1,6 +1,10 @@
+# -*- encoding: utf-8 -*-
+$LOAD_PATH.unshift File.expand_path("../lib", __FILE__)
+require 'telly/version'
+
 Gem::Specification.new do |s|
   s.name        = 'telly'
-  s.version     = '0.1.2'
+  s.version     = Telly::Version::STRING
   s.date        = '2015-02-13'
   s.summary     = "Imports beaker results into TestRail test run results"
   s.description = "Imports beaker results into TestRail test run results"
