@@ -16,42 +16,5 @@
 #   and a test status.""
 
 require 'telly'
-require 'optparse'
 
-# Parses the command line options
-# @return [Void]
-def parse_opts
-  options_hash = {}
-
-  optparse = OptionParser.new do|parser|
-    options_hash = {
-      testrun_id: nil,
-      junit_file: nil,
-    }
-
-    parser.on( '-t', '--testrun-id TESTRUN_ID', 'The testrun id' ) do |testrun_id|
-      options_hash[:testrun_id] = testrun_id
-    end
-
-    parser.on( '-j', '--junit-folder JUNIT_FILE', 'Beaker junit file' ) do |junit_file|
-      options_hash[:junit_file] = junit_file
-    end
-
-    parser.on( '-h', '--help', 'Display this screen' ) do
-      puts parser
-      exit
-    end
-
-    parser.parse!
-
-    if not options_hash[:testrun_id] or not options_hash[:junit_file]
-      puts "Error: Missing option(s)"
-      puts parser
-      exit
-    end
-  end
-
-  options_hash
-end
-
-Telly::main(parse_opts)
+Telly::TestRailTeller.new.send_to_testrail
