@@ -34,6 +34,10 @@ module Telly
           options_hash[:junit_file] = junit_file
         end
 
+        parser.on( '-d', '--dry-run', 'Run without API connection to TestRail' ) do
+          options_hash[:dry_run] = true
+        end
+
         parser.on( '-h', '--help', 'Display this screen' ) do
           puts parser
           exit

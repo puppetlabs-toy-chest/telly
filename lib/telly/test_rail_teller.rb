@@ -65,7 +65,7 @@ module Telly
       puts "#{results[:skips].length} Skipped"
 
       # Set results in testrail
-      bad_results = set_testrail_results(results, options[:junit_file], options[:testrun_id])
+      bad_results = set_testrail_results(results, options[:junit_file], options[:testrun_id], options[:dry_run])
 
       # Print error messages
       if not bad_results.empty?
@@ -122,12 +122,18 @@ module Telly
     # @param [String] junit_file The path to the junit xml file
     #                 Needed for determining the path of the test file in add_failure, etc
     # @param [String] testrun_id The TestRail test run ID
+    # @param [Boolean] dry_run Do not create api connection when dry_run = true
     # 
     # @return [Void] 
     #
-    def set_testrail_results(results, junit_file, testrun_id)
-      credentials = load_credentials(CREDENTIALS_FILE)
-      api = get_testrail_api(credentials)
+    def set_testrail_results(results, junit_file, testrun_id, dry_run = false)
+      if not dry_run
+        credentials = load_credentials(CREDENTIALS_FILE)
+        api = get_testrail_api(credentials)
+      else
+        api = get_testrail_api( { "testrail_username" => 'name', "testrail_password" => 'pass' } )
+      end
+
 
       # Results that couldn't be set in testrail for some reason
       bad_results = {}
@@ -135,7 +141,7 @@ module Telly
       # passes
       results[:passes].each do |junit_result|
         begin
-          submit_result(api, PASSED, junit_result, junit_file, testrun_id)
+          submit_result(api, PASSED, junit_result, junit_file, testrun_id, dry_run)
         rescue MissingTestRailId, TestRail::APIError => e
           bad_results[junit_result[:name]] = e.message
         end
@@ -144,7 +150,7 @@ module Telly
       # Failures
       results[:failures].each do |junit_result|
         begin
-          submit_result(api, FAILED, junit_result, junit_file, testrun_id)
+          submit_result(api, FAILED, junit_result, junit_file, testrun_id, dry_run)
         rescue MissingTestRailId, TestRail::APIError => e
           bad_results[junit_result[:name]] = e.message
         end
@@ -153,7 +159,7 @@ module Telly
       # Skips
       results[:skips].each do |junit_result|
         begin
-          submit_result(api, BLOCKED, junit_result, junit_file, testrun_id)
+          submit_result(api, BLOCKED, junit_result, junit_file, testrun_id, dry_run)
         rescue MissingTestRailId, TestRail::APIError => e
           bad_results[junit_result[:name]] = e.message
         end
@@ -169,6 +175,7 @@ module Telly
     # @param [Nokogiri::XML::Element] junit_result The nokogiri node that holds the junit result
     # @param [String] junit_file Path to the junit file the test result originated from
     # @param [String] testrun_id The testrun ID
+    # @param [Boolean] dry_run When true do not send results to TestRail
     #
     # @return [Void]
     #
@@ -176,7 +183,7 @@ module Telly
     #                             this exception. Should be caught for error reporting
     #
     # @example submit_result(api, BLOCKED, junit_result, junit_file, testrun_id)
-    def submit_result(api, status, junit_result, junit_file, testrun_id)
+    def submit_result(api, status, junit_result, junit_file, testrun_id, dry_run = false)
       test_file_path = beaker_test_path(junit_file, junit_result)
 
       puts junit_result.class
@@ -199,13 +206,15 @@ module Telly
       puts "\nSetting result for test case: #{testcase_id}"
       puts "Adding comment:\n#{testrail_comment}"
 
-      api.send_post("add_result_for_case/#{testrun_id}/#{testcase_id}",
-        {
-          status_id: status,
-          comment: testrail_comment,
-          elapsed: time_elapsed,
-        }
-      )
+      if not dry_run
+        api.send_post("add_result_for_case/#{testrun_id}/#{testcase_id}",
+          {
+            status_id: status,
+            comment: testrail_comment,
+            elapsed: time_elapsed,
+          }
+        )
+      end
     end
 
 
@@ -288,7 +297,7 @@ module Telly
       beaker_folder_path = junit_result[:classname]
       test_filename = junit_result[:name]
 
-      File.join(File.dirname(junit_file_path), "../../", beaker_folder_path, test_filename)
+      File.join(File.dirname(junit_file_path), "../../../", beaker_folder_path, test_filename)
     end
 
   end
