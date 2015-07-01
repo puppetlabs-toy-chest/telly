@@ -1,5 +1,5 @@
 module Telly
   module Version
-    STRING = '2.9.0'
+    STRING = '0.1.2'
   end
 end
